@@ -230,6 +230,55 @@ export default function Journal() {
     finalTranscriptRef.current = "";
   }
 
+  // Button styles
+  const buttonStyles = {
+    primary: {
+      background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      color: "white",
+      padding: "12px 24px",
+      borderRadius: "12px",
+      border: "none",
+      cursor: "pointer",
+      fontWeight: "600",
+      fontSize: "14px",
+      transition: "all 0.3s ease",
+      boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)"
+    },
+    ghost: {
+      background: "linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)",
+      color: "#374151",
+      padding: "10px 20px",
+      borderRadius: "10px",
+      border: "2px solid #e2e8f0",
+      cursor: "pointer",
+      fontWeight: "500",
+      fontSize: "14px",
+      transition: "all 0.3s ease",
+      boxShadow: "0 2px 8px rgba(0, 0, 0, 0.05)"
+    },
+    record: {
+      background: isRecording 
+        ? "linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)" 
+        : "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+      color: "white",
+      padding: "16px",
+      borderRadius: "50%",
+      border: "none",
+      cursor: "pointer",
+      fontWeight: "600",
+      fontSize: "18px",
+      transition: "all 0.3s ease",
+      boxShadow: isRecording 
+        ? "0 4px 20px rgba(239, 68, 68, 0.4)" 
+        : "0 4px 20px rgba(102, 126, 234, 0.4)",
+      width: "60px",
+      height: "60px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center"
+    }
+  };
+
   return (
     <section className="module" data-module="journal">
       <div className="module-header">
@@ -276,7 +325,7 @@ export default function Journal() {
 
           <div className="recording-controls">
             <button 
-              className={`record-btn ${isRecording ? "recording" : ""}`} 
+              style={buttonStyles.record}
               id="recordBtn" 
               onClick={toggleRecording}
             >
@@ -301,25 +350,37 @@ export default function Journal() {
 
           <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
             <button 
-              className="btn btn-primary" 
+              style={{
+                ...buttonStyles.primary,
+                opacity: useTranscriptEnabled ? 1 : 0.6,
+                cursor: useTranscriptEnabled ? "pointer" : "not-allowed"
+              }}
               id="useTranscript" 
               disabled={!useTranscriptEnabled} 
               onClick={useTranscript}
             >
-              Use Transcript
+              🎤 Use Transcript
             </button>
-            <button className="btn btn-ghost" id="clearRecording" onClick={clearRecording}>
-              Clear
+            <button 
+              style={buttonStyles.ghost} 
+              id="clearRecording" 
+              onClick={clearRecording}
+            >
+              🗑️ Clear
             </button>
           </div>
         </div>
 
         <div style={{ marginTop: 10, display: "flex", gap: 8 }}>
-          <button className="btn btn-primary" id="saveEntry" onClick={saveEntry}>
-            Save Entry
+          <button 
+            style={buttonStyles.primary} 
+            id="saveEntry" 
+            onClick={saveEntry}
+          >
+            💾 Save Entry
           </button>
           <button 
-            className="btn btn-ghost" 
+            style={buttonStyles.ghost} 
             id="cancelEntry" 
             onClick={() => { 
               setTitle(""); 
@@ -327,7 +388,7 @@ export default function Journal() {
               setTranscript("No transcript yet");
             }}
           >
-            Cancel
+            ❌ Cancel
           </button>
         </div>
       </div>

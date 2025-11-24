@@ -56,3 +56,4 @@ pnpm-lock.yaml
 .cache/
 .temp/
 .out/
+/full_codebase.txt

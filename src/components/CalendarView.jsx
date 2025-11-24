@@ -11,25 +11,28 @@ export default function CalendarView() {
     setEntries(arr);
   }, []);
 
-  const monthNames = ["January", "February", "March", "April", "May", "June", 
-                     "July", "August", "September", "October", "November", "December"];
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
   const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-  function buildCalendar() {
+  const isToday = (y, m, d) => {
+    const t = new Date();
+    return t.getFullYear() === y && t.getMonth() === m && t.getDate() === d;
+  };
+
+  const buildCalendar = () => {
     const first = new Date(currentYear, currentMonth, 1);
     const startDay = first.getDay();
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
     const cells = [];
-    
-    // Empty cells for days before the first day of month
-    for (let i = 0; i < startDay; i++) {
-      cells.push(null);
-    }
-    
-    // Days of the month
+
+    for (let i = 0; i < startDay; i++) cells.push(null);
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      const dayEntries = entries.filter(entry => entry.date && entry.date.startsWith(dateStr));
+      const dayEntries = entries.filter(e => e.date && e.date.startsWith(dateStr));
       cells.push({
         day,
         date: dateStr,
@@ -37,131 +40,112 @@ export default function CalendarView() {
         isToday: isToday(currentYear, currentMonth, day)
       });
     }
-    
+
     return cells;
-  }
+  };
 
-  function isToday(year, month, day) {
-    const today = new Date();
-    return today.getFullYear() === year && 
-           today.getMonth() === month && 
-           today.getDate() === day;
-  }
-
-  function prevMonth() {
-    setCurrentMonth(prev => {
-      if (prev === 0) {
-        setCurrentYear(currentYear - 1);
-        return 11;
-      }
-      return prev - 1;
-    });
-  }
-
-  function nextMonth() {
-    setCurrentMonth(prev => {
-      if (prev === 11) {
-        setCurrentYear(currentYear + 1);
-        return 0;
-      }
-      return prev + 1;
-    });
-  }
-
-  function handleDayClick(dayData) {
-    if (dayData.entries.length > 0) {
-      const entriesText = dayData.entries.map(entry => 
-        `${getMoodEmoji(entry.mood)} ${entry.mood}\n${entry.title || ''}\n${entry.note || ''}`
-      ).join('\n---\n');
-      alert(`Entries for ${new Date(dayData.date).toLocaleDateString()}:\n\n${entriesText}`);
+  const prevMonth = () => {
+    if (currentMonth === 0) {
+      setCurrentMonth(11);
+      setCurrentYear(y => y - 1);
+    } else {
+      setCurrentMonth(m => m - 1);
     }
-  }
+  };
+
+  const nextMonth = () => {
+    if (currentMonth === 11) {
+      setCurrentMonth(0);
+      setCurrentYear(y => y + 1);
+    } else {
+      setCurrentMonth(m => m + 1);
+    }
+  };
+
+  const handleDayClick = (cell) => {
+    if (!cell || !cell.entries.length) return;
+
+    const data = cell.entries
+      .map(e => `${getMoodEmoji(e.mood)} ${e.mood}\n${e.title || ""}\n${e.note || ""}`)
+      .join("\n----------------\n");
+
+    alert(`${new Date(cell.date).toDateString()}\n\n${data}`);
+  };
 
   const calendarCells = buildCalendar();
 
   return (
-    <section className="module" data-module="calendar">
+    <section className="module">
       <div className="module-header">
         <h2>Emotion Calendar</h2>
-        <div className="module-subtitle">Your monthly mood tracker</div>
+        <div className="module-subtitle">Your monthly mood overview</div>
       </div>
 
       <div className="card">
-        {/* Calendar Header */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
           <button className="btn btn-ghost" onClick={prevMonth}>←</button>
-          <h3 style={{ margin: 0 }}>{monthNames[currentMonth]} {currentYear}</h3>
+          <h3 style={{ margin: 0 }}>
+            {monthNames[currentMonth]} {currentYear}
+          </h3>
           <button className="btn btn-ghost" onClick={nextMonth}>→</button>
         </div>
 
-        {/* Day Headers */}
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(7, 1fr)", 
-          gap: "4px", 
-          marginBottom: "12px",
-          textAlign: "center"
+        {/* Day names */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 6,
+          textAlign: "center",
+          marginBottom: 10
         }}>
           {dayNames.map(day => (
-            <div key={day} style={{ 
-              fontSize: "12px", 
-              color: "var(--muted)", 
-              fontWeight: "600",
-              padding: "8px 0"
-            }}>
+            <div key={day} style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>
               {day}
             </div>
           ))}
         </div>
 
-        {/* Calendar Grid */}
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(7, 1fr)", 
-          gap: "4px"
+        {/* Calendar grid */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: 6
         }}>
-          {calendarCells.map((cell, index) => (
-            <div 
-              key={index}
+          {calendarCells.map((cell, i) => (
+            <div
+              key={i}
+              onClick={() => handleDayClick(cell)}
               style={{
                 aspectRatio: "1",
-                padding: "8px",
-                borderRadius: "8px",
-                background: cell ? (cell.isToday ? "var(--accent)" : "var(--glass)") : "transparent",
-                border: cell?.isToday ? "1px solid var(--accent)" : "1px solid rgba(255,255,255,0.05)",
+                borderRadius: 12,
+                padding: 6,
                 cursor: cell ? "pointer" : "default",
+                background: cell
+                  ? cell.isToday
+                    ? "var(--accent)"
+                    : "var(--glass)"
+                  : "transparent",
+                border: cell?.isToday
+                  ? "1px solid var(--accent)"
+                  : "1px solid rgba(255,255,255,0.05)",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
-                position: "relative"
+                justifyContent: "center"
               }}
-              onClick={() => cell && handleDayClick(cell)}
             >
               {cell && (
                 <>
-                  <div style={{ 
-                    fontSize: "14px", 
-                    fontWeight: cell.isToday ? "600" : "400",
-                    color: cell.isToday ? "#04202d" : "var(--text)",
-                    marginBottom: "4px"
-                  }}>
-                    {cell.day}
-                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 600 }}>{cell.day}</span>
                   {cell.entries.length > 0 && (
-                    <div style={{ 
-                      fontSize: "12px",
-                      display: "flex",
-                      gap: "2px"
-                    }}>
-                      {cell.entries.slice(0, 2).map((entry, idx) => (
-                        <span key={idx} title={`${getMoodEmoji(entry.mood)} ${entry.mood}`}>
-                          {getMoodEmoji(entry.mood)}
-                        </span>
+                    <div style={{ marginTop: 4, display: "flex", gap: 2 }}>
+                      {cell.entries.slice(0, 3).map((e, idx) => (
+                        <span key={idx}>{getMoodEmoji(e.mood)}</span>
                       ))}
-                      {cell.entries.length > 2 && (
-                        <span style={{ fontSize: "10px", color: "var(--muted)" }}>
-                          +{cell.entries.length - 2}
+                      {cell.entries.length > 3 && (
+                        <span style={{ fontSize: 10, color: "var(--muted)" }}>
+                          +{cell.entries.length - 3}
                         </span>
                       )}
                     </div>
@@ -173,16 +157,11 @@ export default function CalendarView() {
         </div>
 
         {/* Legend */}
-        <div style={{ 
-          marginTop: "20px", 
-          paddingTop: "16px", 
-          borderTop: "1px solid rgba(255,255,255,0.1)",
-          fontSize: "12px"
-        }}>
-          <div style={{ color: "var(--muted)", marginBottom: "8px" }}>Mood Legend:</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+        <div style={{ marginTop: 20, borderTop: "1px solid rgba(255,255,255,0.1)", paddingTop: 12 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>Mood Legend</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
             {['happy', 'sad', 'anxious', 'tired', 'angry', 'calm'].map(mood => (
-              <div key={mood} style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <div key={mood} style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <span>{getMoodEmoji(mood)}</span>
                 <span style={{ color: "var(--muted)" }}>{mood}</span>
               </div>
