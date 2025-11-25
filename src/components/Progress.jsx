@@ -11,24 +11,43 @@ export default function Progress() {
     positiveDays: 0,
     meditation: 0
   });
+  const [achievements, setAchievements] = useState([]);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [recentActivity, setRecentActivity] = useState([]);
 
-  // Generate realistic mock data
+  // Achievement definitions
+  const achievementDefinitions = [
+    { id: 1, name: "First Step", description: "Log your first entry", icon: "🚀", unlocked: false },
+    { id: 2, name: "Week Warrior", description: "Log entries for 7 consecutive days", icon: "🏆", unlocked: false },
+    { id: 3, name: "Mood Master", description: "Maintain positive mood for 5+ days", icon: "😊", unlocked: false },
+    { id: 4, name: "Meditation Guru", description: "Complete 10 meditation sessions", icon: "🧘", unlocked: false },
+    { id: 5, name: "Goal Getter", description: "Reach your monthly goal", icon: "🎯", unlocked: false }
+  ];
+
+  // Generate realistic mock data with trends
   const generateMoodData = (days) => {
     const data = [];
-    let currentMood = 4 + Math.random() * 2; // Start between 4-6
+    let currentMood = 4 + Math.random() * 2;
+    let trend = Math.random() > 0.5 ? 0.1 : -0.1; // Slight upward or downward trend
     
     for (let i = 0; i < days; i++) {
-      // Mood tends to continue with small variations
-      currentMood += (Math.random() - 0.5) * 0.8;
-      currentMood = Math.max(1, Math.min(7, currentMood)); // Clamp between 1-7
+      // Add trend and random variation
+      currentMood += trend + (Math.random() - 0.5) * 0.6;
+      currentMood = Math.max(1, Math.min(7, currentMood));
+      
+      // Weekend effect
+      const date = new Date(Date.now() - (days - i - 1) * 24 * 60 * 60 * 1000);
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+      if (isWeekend) currentMood += 0.3; // Slightly better mood on weekends
       
       data.push({
         day: i + 1,
-        date: new Date(Date.now() - (days - i - 1) * 24 * 60 * 60 * 1000),
+        date: date,
         mood: Number(currentMood.toFixed(1)),
         activities: Math.floor(Math.random() * 6),
-        meditation: Math.random() > 0.7, // 30% chance of meditation
-        notes: Math.random() > 0.8 // 20% chance of having notes
+        meditation: Math.random() > 0.7,
+        notes: Math.random() > 0.8,
+        isWeekend: isWeekend
       });
     }
     return data;
@@ -49,14 +68,12 @@ export default function Progress() {
   };
 
   const calculateStreak = (data) => {
-    // Sort by date descending (most recent first)
     const sortedData = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
     
     let currentStreak = 0;
     let longestStreak = 0;
     let tempStreak = 0;
     
-    // Calculate streaks based on consecutive days with entries
     const today = new Date();
     let expectedDate = new Date(today);
     
@@ -64,7 +81,6 @@ export default function Progress() {
       const entryDate = new Date(sortedData[i].date);
       expectedDate.setDate(today.getDate() - i);
       
-      // Check if dates match (consecutive)
       if (entryDate.toDateString() === expectedDate.toDateString()) {
         tempStreak++;
         if (i === 0) currentStreak = tempStreak;
@@ -76,10 +92,7 @@ export default function Progress() {
     
     longestStreak = Math.max(longestStreak, tempStreak);
     
-    return {
-      current: currentStreak,
-      longest: longestStreak
-    };
+    return { current: currentStreak, longest: longestStreak };
   };
 
   const calculateProgress = (data, monthlyGoal) => {
@@ -103,6 +116,30 @@ export default function Progress() {
     return Number(((currentAvg - previousAvg) / previousAvg * 100).toFixed(1));
   };
 
+  const checkAchievements = (data, stats, streak, progress) => {
+    const unlocked = [];
+    
+    if (stats.entries >= 1) {
+      unlocked.push({ ...achievementDefinitions[0], unlocked: true });
+    }
+    if (streak.current >= 7) {
+      unlocked.push({ ...achievementDefinitions[1], unlocked: true });
+    }
+    if (stats.positiveDays >= 70) {
+      unlocked.push({ ...achievementDefinitions[2], unlocked: true });
+    }
+    if (stats.meditation >= 10) {
+      unlocked.push({ ...achievementDefinitions[3], unlocked: true });
+    }
+    if (progress >= goals.monthlyGoal) {
+      unlocked.push({ ...achievementDefinitions[4], unlocked: true });
+    }
+    
+    return unlocked;
+  };
+
+  const [moodTrend, setMoodTrend] = useState(0);
+
   // Initialize and update data when period changes
   useEffect(() => {
     const days = selectedPeriod === "week" ? 7 : 30;
@@ -112,38 +149,78 @@ export default function Progress() {
     const previousPeriodData = generateMoodData(previousDays);
     
     setMoodData(currentPeriodData);
-    setStats(calculateStats(currentPeriodData));
-    setStreakData(calculateStreak(currentPeriodData));
+    const newStats = calculateStats(currentPeriodData);
+    setStats(newStats);
+    const newStreakData = calculateStreak(currentPeriodData);
+    setStreakData(newStreakData);
     
     const progress = calculateProgress(currentPeriodData, goals.monthlyGoal);
     setGoals(prev => ({ ...prev, currentProgress: progress }));
     
-    // Store trend data for display
     setMoodTrend(getMoodTrend(currentPeriodData, previousPeriodData));
+    
+    // Check for new achievements
+    const newAchievements = checkAchievements(currentPeriodData, newStats, newStreakData, progress);
+    setAchievements(newAchievements);
+    
+    // Generate recent activity log
+    const activityLog = currentPeriodData.slice(0, 5).map(day => ({
+      date: day.date,
+      mood: day.mood,
+      meditation: day.meditation,
+      activities: day.activities,
+      type: day.meditation ? "meditation" : "mood_check"
+    }));
+    setRecentActivity(activityLog);
   }, [selectedPeriod]);
 
-  const [moodTrend, setMoodTrend] = useState(0);
-
   const handleAddEntry = () => {
-    // Simulate adding a new entry with realistic data
     const newEntry = {
       day: moodData.length + 1,
       date: new Date(),
       mood: Number((4 + Math.random() * 2).toFixed(1)),
       activities: Math.floor(Math.random() * 6),
       meditation: Math.random() > 0.7,
-      notes: false
+      notes: false,
+      isWeekend: new Date().getDay() === 0 || new Date().getDay() === 6
     };
     
-    const newMoodData = [newEntry, ...moodData.slice(0, -1)]; // Replace oldest entry
+    const newMoodData = [newEntry, ...moodData.slice(0, -1)];
     setMoodData(newMoodData);
-    setStats(calculateStats(newMoodData));
-    setStreakData(calculateStreak(newMoodData));
+    const newStats = calculateStats(newMoodData);
+    setStats(newStats);
+    const newStreakData = calculateStreak(newMoodData);
+    setStreakData(newStreakData);
     
     const progress = calculateProgress(newMoodData, goals.monthlyGoal);
     setGoals(prev => ({ ...prev, currentProgress: progress }));
     
-    alert(`New entry added! Mood: ${newEntry.mood}/7, Activities: ${newEntry.activities}`);
+    // Check for achievements
+    const newAchievements = checkAchievements(newMoodData, newStats, newStreakData, progress);
+    if (newAchievements.length > achievements.length) {
+      setShowCelebration(true);
+      setTimeout(() => setShowCelebration(false), 3000);
+    }
+    setAchievements(newAchievements);
+    
+    // Add to recent activity
+    setRecentActivity(prev => [{
+      date: new Date(),
+      mood: newEntry.mood,
+      meditation: newEntry.meditation,
+      activities: newEntry.activities,
+      type: newEntry.meditation ? "meditation" : "mood_check"
+    }, ...prev.slice(0, 4)]);
+    
+    // Success animation
+    const successMessages = [
+      "Great job tracking your mood! 🌟",
+      "Another step in your wellness journey! 💫",
+      "Consistency is key! Keep it up! 🔑",
+      "Your future self will thank you! 🙏"
+    ];
+    const randomMessage = successMessages[Math.floor(Math.random() * successMessages.length)];
+    alert(`✅ ${randomMessage}\nMood: ${newEntry.mood}/7, Activities: ${newEntry.activities}`);
   };
 
   const handleSetGoal = () => {
@@ -160,15 +237,25 @@ export default function Progress() {
 
   const handleShareProgress = () => {
     const periodText = selectedPeriod === "week" ? "week" : "month";
-    const message = `I've logged ${stats.entries} entries this ${periodText} with an average mood of ${stats.mood}/7! 🎉`;
-    alert(`Share your progress: ${message}`);
+    const moodEmoji = getMoodEmoji(stats.mood);
+    const message = `I've logged ${stats.entries} entries this ${periodText} with an average mood of ${stats.mood}/7 ${moodEmoji}! 🎉\n\n#WellnessJourney #MoodTracking`;
+    
+    if (navigator.share) {
+      navigator.share({
+        title: 'My Wellness Progress',
+        text: message
+      });
+    } else {
+      navigator.clipboard.writeText(message);
+      alert('Progress copied to clipboard! 📋\n\n' + message);
+    }
   };
 
   const getMoodColor = (moodScore) => {
-    if (moodScore >= 6) return "var(--success)";
-    if (moodScore >= 5) return "var(--warning)";
-    if (moodScore >= 4) return "var(--accent)";
-    return "var(--error)";
+    if (moodScore >= 6) return "#10b981";
+    if (moodScore >= 5) return "#f59e0b";
+    if (moodScore >= 4) return "#8b5cf6";
+    return "#ef4444";
   };
 
   const getProgressPercentage = () => {
@@ -186,195 +273,296 @@ export default function Progress() {
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', { 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
+  };
+
+  const getTrendIcon = (trend) => {
+    if (trend > 5) return "📈";
+    if (trend > 0) return "↗️";
+    if (trend < -5) return "📉";
+    if (trend < 0) return "↘️";
+    return "➡️";
+  };
+
+  const getActivityIcon = (type) => {
+    switch (type) {
+      case 'meditation': return '🧘';
+      case 'mood_check': return '😊';
+      default: return '📝';
+    }
   };
 
   return (
     <section className="module" data-module="progress">
+      {showCelebration && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+          zIndex: 1000
+        }}>
+          {[...Array(30)].map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                top: '-10px',
+                left: `${Math.random() * 100}%`,
+                fontSize: '24px',
+                animation: `fall ${Math.random() * 3 + 2}s linear forwards`,
+                animationDelay: `${Math.random() * 2}s`,
+                opacity: 0.8
+              }}
+            >
+              {['🎉', '✨', '🌟', '🏆', '🎊'][Math.floor(Math.random() * 5)]}
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="module-header">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div>
-            <h2 style={{ margin: 0 }}>Progress Tracking</h2>
-            <div style={{ fontSize: 13, color: "var(--muted)" }}>Monitor your well-being journey</div>
+            <h2 style={{ margin: 0 }}>Progress & Achievements</h2>
+            <div style={{ fontSize: 13, color: "var(--muted)" }}>Track your wellness journey with style</div>
           </div>
           
-          <div style={{ display: "flex", gap: "0.5rem" }}>
-            <button 
-              className={`period-btn ${selectedPeriod === "week" ? "active" : ""}`}
-              onClick={() => setSelectedPeriod("week")}
-              style={{
-                padding: "0.5rem 1rem",
-                border: "1px solid var(--border)",
-                background: selectedPeriod === "week" ? "var(--primary)" : "transparent",
-                color: selectedPeriod === "week" ? "white" : "var(--text)",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "14px"
-              }}
-            >
-              Week
-            </button>
-            <button 
-              className={`period-btn ${selectedPeriod === "month" ? "active" : ""}`}
-              onClick={() => setSelectedPeriod("month")}
-              style={{
-                padding: "0.5rem 1rem",
-                border: "1px solid var(--border)",
-                background: selectedPeriod === "month" ? "var(--primary)" : "transparent",
-                color: selectedPeriod === "month" ? "white" : "var(--text)",
-                borderRadius: "4px",
-                cursor: "pointer",
-                fontSize: "14px"
-              }}
-            >
-              Month
-            </button>
+          <div style={{ display: "flex", gap: "0.5rem", background: 'rgba(255,255,255,0.05)', padding: '4px', borderRadius: '12px' }}>
+            {["week", "month"].map(period => (
+              <button 
+                key={period}
+                onClick={() => setSelectedPeriod(period)}
+                style={{
+                  padding: "0.5rem 1rem",
+                  border: "none",
+                  background: selectedPeriod === period 
+                    ? 'linear-gradient(135deg, rgba(139,211,199,0.2), rgba(139,211,199,0.1))' 
+                    : 'transparent',
+                  color: selectedPeriod === period ? 'var(--accent)' : 'var(--text)',
+                  borderRadius: "8px",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  fontWeight: selectedPeriod === period ? '600' : '400',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {period === "week" ? "📅 Week" : "📊 Month"}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem" }}>
+      <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: 'wrap' }}>
         <button 
           onClick={handleAddEntry}
           style={{
-            padding: "0.75rem 1rem",
-            background: "var(--primary)",
+            padding: "0.75rem 1.5rem",
+            background: "linear-gradient(135deg, #8b5cf6, #a78bfa)",
             color: "white",
             border: "none",
-            borderRadius: "8px",
+            borderRadius: "12px",
             cursor: "pointer",
             fontSize: "14px",
-            flex: 1
+            fontWeight: '600',
+            flex: 1,
+            minWidth: '140px',
+            transition: 'all 0.3s ease',
+            boxShadow: '0 4px 14px rgba(139, 92, 246, 0.25)'
           }}
+          onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+          onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
         >
-          + Add Today's Entry
+          ✨ Add Today's Entry
         </button>
         <button 
           onClick={handleShareProgress}
           style={{
-            padding: "0.75rem 1rem",
-            background: "var(--bg-muted)",
-            border: "1px solid var(--border)",
-            borderRadius: "8px",
+            padding: "0.75rem 1.5rem",
+            background: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            borderRadius: "12px",
             cursor: "pointer",
-            fontSize: "14px"
+            fontSize: "14px",
+            color: 'var(--text)',
+            transition: 'all 0.3s ease'
           }}
+          onMouseEnter={(e) => e.target.style.transform = 'translateY(-2px)'}
+          onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
         >
-          Share Progress
+          📤 Share Progress
         </button>
       </div>
 
-      <div className="card">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-          <h3 style={{ margin: 0 }}>{selectedPeriod === "week" ? "Weekly" : "Monthly"} Summary</h3>
-          <div className="small" style={{ color: "var(--muted)" }}>
-            {selectedPeriod === "week" ? "This week" : "This month"}
+      {/* Stats Overview */}
+      <div className="card" style={{ background: 'linear-gradient(135deg, rgba(139,211,199,0.05), rgba(139,211,199,0.02))' }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            📈 {selectedPeriod === "week" ? "Weekly" : "Monthly"} Overview
+          </h3>
+          <div className="small" style={{ 
+            color: "var(--muted)",
+            background: 'rgba(255,255,255,0.05)',
+            padding: '4px 8px',
+            borderRadius: '6px'
+          }}>
+            {selectedPeriod === "week" ? "Last 7 days" : "Last 30 days"}
           </div>
         </div>
         
-        <div className="stats-grid">
-          <div 
-            className="stat-card"
-            style={{ cursor: "pointer" }}
-            onClick={() => alert(`You've made ${stats.entries} entries in the last ${selectedPeriod === 'week' ? '7 days' : '30 days'}`)}
-          >
-            <div className="stat-value">{stats.entries}</div>
-            <div className="stat-label">Entries</div>
-            <div className="small" style={{ color: "var(--muted)", marginTop: "0.25rem" }}>
-              {selectedPeriod === 'week' ? '7 days' : '30 days'}
-            </div>
-          </div>
-          
-          <div 
-            className="stat-card"
-            style={{ cursor: "pointer" }}
-            onClick={() => alert(`Your average mood is ${stats.mood}/7 ${getMoodEmoji(stats.mood)}`)}
-          >
+        <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+          {[
+            { 
+              label: "Entries", 
+              value: stats.entries, 
+              subtitle: selectedPeriod === 'week' ? '7 days' : '30 days',
+              icon: '📝',
+              color: '#8b5cf6'
+            },
+            { 
+              label: "Avg. Mood", 
+              value: stats.mood, 
+              subtitle: getMoodEmoji(stats.mood) + ' /7',
+              icon: '😊',
+              color: getMoodColor(stats.mood)
+            },
+            { 
+              label: "Positive Days", 
+              value: `${stats.positiveDays}%`, 
+              subtitle: 'Mood ≥ 5/7',
+              icon: '🌟',
+              color: stats.positiveDays >= 70 ? "#10b981" : "#f59e0b"
+            },
+            { 
+              label: "Meditation", 
+              value: stats.meditation, 
+              subtitle: 'Sessions',
+              icon: '🧘',
+              color: '#3b82f6'
+            }
+          ].map((stat, index) => (
             <div 
-              className="stat-value"
-              style={{ color: getMoodColor(stats.mood) }}
+              key={index}
+              className="stat-card"
+              style={{ 
+                cursor: "pointer",
+                padding: '1.25rem',
+                background: 'rgba(255,255,255,0.03)',
+                borderRadius: '12px',
+                border: '1px solid rgba(255,255,255,0.1)',
+                transition: 'all 0.3s ease',
+                textAlign: 'center'
+              }}
+              onMouseEnter={(e) => e.target.style.transform = 'translateY(-4px)'}
+              onMouseLeave={(e) => e.target.style.transform = 'translateY(0)'}
+              onClick={() => alert(`${stat.label}: ${stat.value} ${stat.subtitle}`)}
             >
-              {stats.mood}
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>{stat.icon}</div>
+              <div className="stat-value" style={{ 
+                fontSize: '1.75rem', 
+                fontWeight: '700',
+                color: stat.color,
+                marginBottom: '0.25rem'
+              }}>
+                {stat.value}
+              </div>
+              <div className="stat-label" style={{ 
+                fontSize: '14px', 
+                fontWeight: '600',
+                marginBottom: '0.25rem'
+              }}>
+                {stat.label}
+              </div>
+              <div className="small" style={{ color: "var(--muted)" }}>
+                {stat.subtitle}
+              </div>
             </div>
-            <div className="stat-label">Avg. Mood</div>
-            <div className="small" style={{ color: "var(--muted)", marginTop: "0.25rem" }}>
-              {getMoodEmoji(stats.mood)} /7
-            </div>
-          </div>
-          
-          <div className="stat-card">
-            <div className="stat-value" style={{ color: stats.positiveDays >= 70 ? "var(--success)" : "var(--warning)" }}>
-              {stats.positiveDays}%
-            </div>
-            <div className="stat-label">Positive Days</div>
-            <div className="small" style={{ color: "var(--muted)", marginTop: "0.25rem" }}>
-              Mood ≥ 5/7
-            </div>
-          </div>
-          
-          <div 
-            className="stat-card"
-            style={{ cursor: "pointer" }}
-            onClick={() => alert(`You've completed ${stats.meditation} meditation sessions`)}
-          >
-            <div className="stat-value">{stats.meditation}</div>
-            <div className="stat-label">Meditation</div>
-            <div className="small" style={{ color: "var(--muted)", marginTop: "0.25rem" }}>
-              Sessions
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
       <div style={{ height: 18 }} />
 
-      <div className="grid cols-2">
+      <div className="grid cols-2" style={{ gap: "1.5rem" }}>
+        {/* Streak & Goals */}
         <div className="card">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-            <h3 style={{ margin: 0 }}>Consistency Streak</h3>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              🔥 Consistency & Goals
+            </h3>
             <button 
               onClick={() => alert(`Your longest streak is ${streakData.longest} days! 🏆`)}
               style={{
                 background: "none",
                 border: "none",
-                color: "var(--primary)",
+                color: "var(--accent)",
                 cursor: "pointer",
-                fontSize: "12px"
+                fontSize: "12px",
+                padding: '4px 8px',
+                borderRadius: '6px',
+                background: 'rgba(139,211,199,0.1)'
               }}
             >
               View History
             </button>
           </div>
           
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 12 }}>
-            <div style={{ fontSize: 32, fontWeight: 700, color: streakData.current > 0 ? "var(--success)" : "var(--muted)" }}>
+          {/* Streak Display */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: 16, 
+            marginBottom: '1.5rem',
+            padding: '1rem',
+            background: 'rgba(139,211,199,0.05)',
+            borderRadius: '12px',
+            border: '1px solid rgba(139,211,199,0.1)'
+          }}>
+            <div style={{ 
+              fontSize: 48, 
+              fontWeight: 700, 
+              color: streakData.current > 0 ? "#10b981" : "var(--muted)",
+              textShadow: streakData.current > 0 ? '0 0 20px rgba(16, 185, 129, 0.3)' : 'none'
+            }}>
               {streakData.current}
             </div>
             <div>
-              <div style={{ fontWeight: 600 }}>Days in a row</div>
-              <div className="small">
+              <div style={{ fontWeight: 600, fontSize: '16px', marginBottom: '4px' }}>Day Streak</div>
+              <div className="small" style={{ lineHeight: '1.4' }}>
                 {streakData.current > 0 
-                  ? `You've logged your mood for ${streakData.current} consecutive days`
+                  ? `🔥 You're on fire! ${streakData.current} days in a row`
                   : "Start logging to build your streak!"
                 }
               </div>
             </div>
           </div>
           
+          {/* Goal Progress */}
           <div style={{ marginTop: "1.5rem" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "0.5rem" }}>
-              <span className="small">Monthly Goal Progress</span>
-              <span className="small" style={{ fontWeight: 600 }}>
-                {goals.currentProgress}/{goals.monthlyGoal} entries
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: 'center', marginBottom: "0.75rem" }}>
+              <span style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                🎯 Monthly Goal
+              </span>
+              <span style={{ fontWeight: 600, color: 'var(--accent)' }}>
+                {goals.currentProgress}/{goals.monthlyGoal}
               </span>
             </div>
             <div 
               className="progress-bar" 
               style={{ 
                 marginTop: 0,
-                cursor: "pointer"
+                cursor: "pointer",
+                height: '12px',
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: '20px',
+                overflow: 'hidden'
               }}
               onClick={handleSetGoal}
             >
@@ -382,22 +570,36 @@ export default function Progress() {
                 className="progress-fill" 
                 style={{ 
                   width: `${getProgressPercentage()}%`,
-                  background: getProgressPercentage() >= 100 ? "var(--success)" : "var(--accent)"
+                  height: '100%',
+                  background: getProgressPercentage() >= 100 
+                    ? "linear-gradient(135deg, #10b981, #34d399)"
+                    : "linear-gradient(135deg, #8b5cf6, #a78bfa)",
+                  borderRadius: '20px',
+                  transition: 'width 0.5s ease',
+                  boxShadow: getProgressPercentage() >= 100 ? '0 0 20px rgba(16, 185, 129, 0.3)' : 'none'
                 }} 
               />
             </div>
-            <div className="small" style={{ textAlign: "center", marginTop: 8 }}>
-              {Math.round(getProgressPercentage())}% of your monthly goal
-              <br />
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center',
+              marginTop: '8px'
+            }}>
+              <span className="small" style={{ color: 'var(--muted)' }}>
+                {Math.round(getProgressPercentage())}% complete
+              </span>
               <button 
                 onClick={handleSetGoal}
                 style={{
                   background: "none",
                   border: "none",
-                  color: "var(--primary)",
+                  color: "var(--accent)",
                   cursor: "pointer",
                   fontSize: "12px",
-                  marginTop: "0.25rem"
+                  padding: '2px 6px',
+                  borderRadius: '4px',
+                  background: 'rgba(139,211,199,0.1)'
                 }}
               >
                 Adjust goal
@@ -406,34 +608,51 @@ export default function Progress() {
           </div>
         </div>
 
+        {/* Mood Trend & Achievements */}
         <div className="card">
-          <h3 style={{ marginBottom: "1rem" }}>Mood Trend</h3>
+          <h3 style={{ marginBottom: "1.5rem", display: 'flex', alignItems: 'center', gap: '8px' }}>
+            📊 Trends & Achievements
+          </h3>
           
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: "1rem" }}>
+          {/* Mood Trend */}
+          <div style={{ 
+            display: "flex", 
+            alignItems: "center", 
+            gap: 16, 
+            marginBottom: "1.5rem",
+            padding: '1rem',
+            background: 'rgba(255,255,255,0.03)',
+            borderRadius: '12px'
+          }}>
             <div style={{ 
               fontSize: 32, 
               fontWeight: 700, 
-              color: moodTrend > 0 ? "var(--success)" : moodTrend < 0 ? "var(--error)" : "var(--muted)" 
+              color: moodTrend > 0 ? "#10b981" : moodTrend < 0 ? "#ef4444" : "var(--muted)" 
             }}>
-              {moodTrend > 0 ? '+' : ''}{moodTrend}%
+              {getTrendIcon(moodTrend)} {moodTrend > 0 ? '+' : ''}{moodTrend}%
             </div>
             <div>
-              <div style={{ fontWeight: 600 }}>
-                {moodTrend > 0 ? 'Improving' : moodTrend < 0 ? 'Needs attention' : 'Stable'}
+              <div style={{ fontWeight: 600, marginBottom: '4px' }}>
+                {moodTrend > 0 ? 'Trending Up' : moodTrend < 0 ? 'Trending Down' : 'Stable'}
               </div>
-              <div className="small">
+              <div className="small" style={{ lineHeight: '1.4' }}>
                 {moodTrend > 0 
-                  ? 'Your average mood has improved' 
+                  ? 'Your average mood is improving!' 
                   : moodTrend < 0 
-                    ? 'Your average mood has decreased'
-                    : 'Your mood is stable'
+                    ? 'Your average mood needs attention'
+                    : 'Your mood is holding steady'
                 }
               </div>
             </div>
           </div>
           
-          <div className="chart-placeholder" style={{ height: 100, marginTop: 12 }}>
-            <div style={{ display: "flex", height: "100%", alignItems: "end", gap: 4 }}>
+          {/* Mini Mood Chart */}
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <span className="small" style={{ fontWeight: '600' }}>Mood Timeline</span>
+              <span className="small" style={{ color: "var(--muted)" }}>Click bars for details</span>
+            </div>
+            <div style={{ display: "flex", height: 60, alignItems: "end", gap: 4 }}>
               {moodData.map((day, index) => (
                 <div
                   key={day.day}
@@ -441,58 +660,180 @@ export default function Progress() {
                     flex: 1,
                     background: getMoodColor(day.mood),
                     height: `${(day.mood / 7) * 100}%`,
-                    borderRadius: 2,
+                    borderRadius: '4px 4px 0 0',
                     cursor: "pointer",
                     transition: "all 0.2s ease",
-                    opacity: 0.8
+                    opacity: 0.8,
+                    position: 'relative'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.opacity = "1";
-                    e.currentTarget.style.transform = "scale(1.05)";
+                    e.currentTarget.style.transform = "scaleY(1.1)";
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.opacity = "0.8";
-                    e.currentTarget.style.transform = "scale(1)";
+                    e.currentTarget.style.transform = "scaleY(1)";
                   }}
                   onClick={() => alert(
-                    `${formatDate(day.date)}\nMood: ${day.mood}/7 ${getMoodEmoji(day.mood)}\nActivities: ${day.activities}\nMeditation: ${day.meditation ? 'Yes' : 'No'}\nNotes: ${day.notes ? 'Yes' : 'No'}`
+                    `📅 ${formatDate(day.date)}\n😊 Mood: ${day.mood}/7 ${getMoodEmoji(day.mood)}\n🎯 Activities: ${day.activities}\n🧘 Meditation: ${day.meditation ? 'Yes' : 'No'}\n📝 Notes: ${day.notes ? 'Yes' : 'No'}`
                   )}
-                />
+                >
+                  {day.meditation && (
+                    <div style={{
+                      position: 'absolute',
+                      top: '-8px',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      fontSize: '10px'
+                    }}>
+                      🧘
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>
-          
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: "0.5rem" }}>
-            <span className="small" style={{ color: "var(--muted)" }}>
-              {selectedPeriod === "week" ? "Last 7 days" : "Last 30 days"}
-            </span>
-            <span className="small" style={{ color: "var(--muted)" }}>
-              Click for details
-            </span>
+
+          {/* Achievements Preview */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              <span className="small" style={{ fontWeight: '600' }}>Recent Achievements</span>
+              <span className="small" style={{ color: "var(--muted)" }}>
+                {achievements.length}/{achievementDefinitions.length}
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              {achievements.slice(0, 3).map(achievement => (
+                <div
+                  key={achievement.id}
+                  style={{
+                    padding: '6px 10px',
+                    background: 'rgba(139,211,199,0.1)',
+                    borderRadius: '20px',
+                    fontSize: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    border: '1px solid rgba(139,211,199,0.2)'
+                  }}
+                  title={achievement.description}
+                >
+                  <span>{achievement.icon}</span>
+                  <span>{achievement.name}</span>
+                </div>
+              ))}
+              {achievements.length === 0 && (
+                <div className="small" style={{ color: 'var(--muted)', fontStyle: 'italic' }}>
+                  Complete activities to unlock achievements!
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Activity & Achievements */}
       <div style={{ height: 18 }} />
       
-      <div className="card">
-        <h3>Recent Activity</h3>
-        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginTop: "0.75rem" }}>
-          {moodData.slice(0, 3).map((day, index) => (
-            <div key={day.day} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span className="small">
-                {formatDate(day.date)}: {day.mood}/7 {getMoodEmoji(day.mood)}
-              </span>
-              <span className="small" style={{ 
-                color: day.meditation ? "var(--success)" : "var(--muted)" 
-              }}>
-                {day.meditation ? "Meditated" : "No meditation"}
-              </span>
-            </div>
-          ))}
+      <div className="grid cols-2" style={{ gap: "1.5rem" }}>
+        {/* Recent Activity */}
+        <div className="card">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
+            📝 Recent Activity
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {recentActivity.map((activity, index) => (
+              <div 
+                key={index} 
+                style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "12px",
+                  padding: '0.75rem',
+                  background: 'rgba(255,255,255,0.03)',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255,255,255,0.05)'
+                }}
+              >
+                <div style={{ fontSize: '1.25rem' }}>
+                  {getActivityIcon(activity.type)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '14px', fontWeight: '500' }}>
+                    {activity.type === 'meditation' ? 'Meditation Session' : 'Mood Check'}
+                  </div>
+                  <div className="small" style={{ color: 'var(--muted)' }}>
+                    {formatDate(activity.date)}
+                  </div>
+                </div>
+                <div style={{ 
+                  fontSize: '14px', 
+                  fontWeight: '600',
+                  color: getMoodColor(activity.mood)
+                }}>
+                  {activity.mood}/7
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* All Achievements */}
+        <div className="card">
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1rem' }}>
+            🏆 Your Achievements
+          </h3>
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {achievementDefinitions.map(achievement => (
+              <div 
+                key={achievement.id}
+                style={{ 
+                  display: "flex", 
+                  alignItems: "center", 
+                  gap: "12px",
+                  padding: '0.75rem',
+                  background: achievement.unlocked 
+                    ? 'rgba(139,211,199,0.1)' 
+                    : 'rgba(255,255,255,0.03)',
+                  borderRadius: '8px',
+                  border: `1px solid ${achievement.unlocked ? 'rgba(139,211,199,0.2)' : 'rgba(255,255,255,0.05)'}`,
+                  opacity: achievement.unlocked ? 1 : 0.6
+                }}
+              >
+                <div style={{ fontSize: '1.5rem' }}>
+                  {achievement.icon}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ 
+                    fontSize: '14px', 
+                    fontWeight: '500',
+                    color: achievement.unlocked ? 'var(--accent)' : 'var(--text)'
+                  }}>
+                    {achievement.name}
+                  </div>
+                  <div className="small" style={{ color: 'var(--muted)' }}>
+                    {achievement.description}
+                  </div>
+                </div>
+                <div style={{ 
+                  fontSize: '12px',
+                  color: achievement.unlocked ? '#10b981' : 'var(--muted)'
+                }}>
+                  {achievement.unlocked ? '✅ Unlocked' : '🔒 Locked'}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes fall {
+          0% { transform: translateY(-10px) rotate(0deg); opacity: 0; }
+          10% { opacity: 1; }
+          100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+      `}</style>
     </section>
   );
 }
