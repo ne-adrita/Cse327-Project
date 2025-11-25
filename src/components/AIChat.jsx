@@ -21,6 +21,39 @@ export default function AIChat() {
     const lowerMsg = userMessage.toLowerCase();
     let contextInstruction = "Provide empathetic postpartum support with varied, contextual suggestions.";
 
+    // Postpartum-related keywords
+    const postpartumKeywords = [
+      'baby', 'cry', 'crying', 'postpartum', 'postnatal', 'newborn', 'infant',
+      'breast', 'nurs', 'feed', 'lactat', 'mom', 'mother', 'parent', 'parenting',
+      'recover', 'heal', 'birth', 'pregnancy', 'pregnant', 'delivery',
+      'mood', 'emotional', 'hormone', 'anxious', 'worry', 'panic', 'depress',
+      'sad', 'tired', 'exhaust', 'sleep', 'fatigue', 'overwhelm', 'stress',
+      'lonely', 'alone', 'isolat', 'guilt', 'bad mom', 'failure',
+      'body', 'weight', 'shape', 'look', 'pain', 'hurt',
+      'partner', 'husband', 'wife', 'relationship', 'intimacy', 'sex',
+      'bond', 'connect', 'attachment', 'help', 'support', 'ask',
+      'work', 'job', 'career', 'return', 'friend', 'social', 'people',
+      'memory', 'forget', 'brain', 'focus', 'hair', 'skin', 'teeth',
+      'walk', 'exercise', 'movement', 'active', 'eat', 'food', 'nutrition',
+      'hospital', 'doctor', 'appointment', 'medical', 'sibling', 'toddler',
+      'family', 'parents', 'in-law', 'money', 'financial', 'cost',
+      'house', 'home', 'clean', 'chores', 'car', 'drive', 'travel',
+      'pets', 'dog', 'cat', 'cloth', 'diaper', 'bath', 'schedule',
+      'routine', 'vaccine', 'shot', 'milestone', 'develop', 'growth',
+      'product', 'gear', 'buy', 'time', 'alone time', 'break',
+      'identity', 'who i am', 'future', 'plan', 'compare', 'other mom',
+      'decision', 'choice', 'mood swing', 'tearful', 'night', 'evening',
+      'morning', 'wake up'
+    ];
+
+    // Check if message contains any postpartum-related keywords
+    const isPostpartumRelated = postpartumKeywords.some(keyword => lowerMsg.includes(keyword));
+
+    // ADDED THIS LINE - Return "I don't know" for non-postpartum topics
+    if (!isPostpartumRelated) {
+      return "I do not know about this topic sorry for that. You can ask me postpartum-related questions.";
+    }
+
     if (lowerMsg.includes("cry") || lowerMsg.includes("crying")) {
       contextInstruction = "Offer dynamic, randomized strategies for soothing a crying baby postpartum. Focus on practical techniques that are easy to implement.";
     } else if (lowerMsg.includes("anxious") || lowerMsg.includes("worry") || lowerMsg.includes("panic")) {
