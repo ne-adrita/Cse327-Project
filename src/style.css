@@ -1,0 +1,75 @@
+/* Modern Pastel UI */
+
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #ffe6f0, #e7f3ff);
+    font-family: "Poppins", sans-serif;
+    height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .auth-container, .dashboard-container {
+    width: 360px;
+    background: white;
+    padding: 30px;
+    border-radius: 18px;
+    box-shadow: 0px 6px 28px rgba(0,0,0,0.12);
+    text-align: center;
+  }
+  
+  .auth-container h2, .dashboard-container h2 {
+    margin-bottom: 20px;
+    color: #333;
+  }
+  
+  input {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 10px;
+    border: 1px solid #ddd;
+    font-size: 15px;
+  }
+  
+  button {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    font-size: 16px;
+    background: #ff80ab;
+    border: none;
+    color: white;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: 0.3s;
+  }
+  
+  button:hover {
+    background: #ff4f91;
+  }
+  
+  a {
+    color: #0057ff;
+    font-size: 14px;
+    text-decoration: none;
+  }
+  
+  .dashboard-card {
+    margin-top: 20px;
+    padding: 20px;
+    background: #f9faff;
+    border-radius: 12px;
+    box-shadow: 0px 3px 16px rgba(0,0,0,0.08);
+  }
+  
+  .logout-btn {
+    background: #ff5252;
+  }
+  
+  .logout-btn:hover {
+    background: #ff1744;
+  }
+  

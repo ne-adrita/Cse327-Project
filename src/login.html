@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Login</title>
+  <link rel="stylesheet" href="./style.css" />
+  <script src="./auth.js"></script>
+</head>
+<body>
+
+  <div class="auth-container">
+    <h2>Welcome Back 👋</h2>
+
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+
+    <button onclick="handleLogin()">Login</button>
+
+    <p style="margin-top: 15px;">Don't have an account?
+      <a href="./register.html">Create one</a>
+    </p>
+  </div>
+
+  <script>
+    function handleLogin() {
+      const email = document.getElementById("email").value;
+      const pass  = document.getElementById("password").value;
+
+      const result = loginUser(email, pass);
+
+      if (!result.success) {
+        alert("Invalid email or password!");
+      } else {
+        window.location.href = "./dashboard.html";
+      }
+    }
+  </script>
+
+</body>
+</html>
