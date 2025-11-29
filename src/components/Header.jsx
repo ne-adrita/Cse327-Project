@@ -1,7 +1,6 @@
-
 import React from "react";
 
-export default function Header({ onNavigate }) {
+export default function Header({ onNavigate, onLogout }) {
   const handleSearch = (e) => {
     const query = e.target.value.toLowerCase();
     console.log("Searching for:", query);
@@ -14,15 +13,29 @@ export default function Header({ onNavigate }) {
           type="text" 
           id="quickSearch" 
           placeholder="Search mood, notes, dates..." 
-          style={{background: "transparent", border: 0, color: "inherit", outline: 0, width: "320px"}}
+          style={{
+            background: "transparent",
+            border: 0,
+            color: "inherit",
+            outline: 0,
+            width: "320px"
+          }}
           onChange={handleSearch}
         />
       </div>
       <div className="profile">
-        <button className="btn btn-ghost" id="newEntryBtn" onClick={() => onNavigate("journal")}>
+        <button
+          className="btn btn-ghost"
+          id="newEntryBtn"
+          onClick={() => onNavigate("journal")}
+        >
           + New Entry
         </button>
         <div className="avatar">NA</div>
+        {/* ✅ Logout button */}
+        <button className="btn btn-secondary" onClick={onLogout}>
+          Logout
+        </button>
       </div>
     </div>
   );
