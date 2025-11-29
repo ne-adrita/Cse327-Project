@@ -1,5 +1,5 @@
-// App.jsx (updated main layout)
 import React, { useState } from "react";
+import Login from "./components/Login";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Dashboard from "./components/Dashboard";
@@ -12,9 +12,15 @@ import Meditation from "./components/Meditation";
 import Progress from "./components/Progress";
 import AIChat from "./components/AIChat";
 import Settings from "./components/Settings";
+import { getLoggedInUser, logoutUser } from "./auth/authService";
 
 export default function App() {
+  const [user, setUser] = useState(getLoggedInUser());
   const [activeModule, setActiveModule] = useState("dashboard");
+
+  if (!user) {
+    return <Login onLogin={setUser} />;
+  }
 
   const renderModule = () => {
     switch (activeModule) {
@@ -36,9 +42,15 @@ export default function App() {
     <div className="app">
       <Sidebar active={activeModule} onNavigate={setActiveModule} />
       <div className="main-content">
-        <Header onNavigate={setActiveModule} />
+      <Header 
+        onNavigate={setActiveModule} 
+        onLogout={() => { 
+          logoutUser();      // clear localStorage
+          setUser(null);     // reset React state → triggers Login screen
+        }} 
+      />
         <div className="module-container">
-          {renderModule()}
+          {renderModule(activeModule)}
         </div>
       </div>
     </div>
